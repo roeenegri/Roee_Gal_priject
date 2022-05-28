@@ -21,6 +21,7 @@ void sum_two_vectors (double **, double *, int, int);
 int find_dimension(char*);
 int find_num_of_vectors(char*);
 int isNumber(char*);
+static PyObject* mainC_Py(PyObject*, PyObject*);
 
 
 
@@ -33,7 +34,7 @@ char ERROR [] = "An Error Has Occurred"; /*print and return 1 if any other error
 
 
 static PyMethodDef _capiMethods[] = {
-    {"fit", (PyCFunction) mainC_Py, METH_VARARGS, PyDoc_STR("calc the k meams")},
+    {"fit", (PyCFunction)mainC_Py, METH_VARARGS, PyDoc_STR("calc the k meams")},
     {NULL, NULL, 0, NULL}
 };
 
@@ -60,13 +61,10 @@ PyMODINIT_FUNC PyInit_capi_kmeans(void) {
 
 static PyObject *
 mainC_Py(PyObject *self, PyObject *args){
-    PyObject *file_namePy;
     PyObject *kFirstVectorsIndexPy;
     PyObject *ret;
     char* file_name;
     int* k_first_vectors_index;
-    double **data;
-    double **kFirstVectors;
     int k, n, max_iter, dimension;
     float EPSILON;
     int cnt ; /*iteration counter of the while-loop*/
@@ -79,7 +77,7 @@ mainC_Py(PyObject *self, PyObject *args){
     double **sum_of_vectors;
     int j;
 
-    if (!PyArg_ParseTuple(args, "sOiiiid", &file_namePy, &kFirstVectorsIndexPy, &k, &n, &max_iter, &dimension, &EPSILON)){
+    if (!PyArg_ParseTuple(args, "sOiiiid", &file_name, &kFirstVectorsIndexPy, &k, &n, &max_iter, &dimension, &EPSILON)){
         //print erorr??????????????
         return NULL;
     }
@@ -90,7 +88,6 @@ mainC_Py(PyObject *self, PyObject *args){
         k_first_vectors_index[i] = PyLong_AsLong(PyList_GET_ITEM(kFirstVectorsIndexPy, i));
     }
 
-    file_name = file_namePy; 
 
     cnt = 0;
 
