@@ -164,7 +164,6 @@ while len(miu_list) < k:
 # c_module.connect()
 
 cent_list = mykmeanssp.fit("vectors.txt", index_list, k, num_of_vectors, max_iter, dimension, EPSILON)
-print (cent_list)
 
 # retrieving original indices of chosen k vectors
 
@@ -177,9 +176,11 @@ for i in range(0, len(index_list)):  # printing indices (with commas)
 for i in range(0, len(cent_list)):  # printing centroids (by coordinates with commas)
     for j in range(0, len(cent_list[i])):
         if i == (len(cent_list[i]) - 1):
-            print(cent_list[i][j])
+            print("%.4f"% cent_list[i][j])
+            print('\n')
+
         else:
-            print(cent_list[i][j], ",", sep='', end='')
+            print("%.4f"% cent_list[i][j], ",", sep='', end='')
 
 # except:
 #   errorOccurred()
