@@ -96,6 +96,8 @@ def main():
 
         # converting dataframe to numpy 2D-array, in order to use seed and numpy.random.choice() for random choosing
         vector_table = vector_table.to_numpy()
+        list_of_lists = vector_table.tolist()  # creating a list of lists to send to c module
+
         num_of_vectors = len(vector_table)  # counting the number of vectors provided
 
         index_list = []  # index list: will be returned to the user at the end of the run
