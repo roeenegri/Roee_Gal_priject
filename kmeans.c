@@ -9,7 +9,7 @@
 
 /* function declaration */
 
-double** extract_k_first_vectors(char* , int, int, int*);
+double** extract_k_first_vectors(char* , int, int, int*,double**);
 int check_centroid_diff(double**, double**, int, int, double);
 void calc_centroids(double**, int *, double **, int, int);
 int matching_cluster(double*, double **, int, int);
@@ -82,10 +82,11 @@ mainC_Py(PyObject *self, PyObject *args){
         return NULL;
     }
 
-    k_first_vectors_index = calloc(k, sizeof(int));
+    k_first_vectors_index = (int*) calloc(k, sizeof(int));
 
     for(i=0; i < k; i++){
-        k_first_vectors_index[i] = PyLong_AsLong(PyList_GET_ITEM(kFirstVectorsIndexPy, i));
+        PyObject *item = PyList_GetItem(kFirstVectorsIndexPy, i); 
+        k_first_vectors_index[i] = PyLong_AsLong(item);
     }
 
 
@@ -110,7 +111,7 @@ mainC_Py(PyObject *self, PyObject *args){
 
     /*initialization of centroid list: with first k vectors*/
 
-    cents = extract_k_first_vectors(file_name, k, dimension, k_first_vectors_index); 
+    cents = extract_k_first_vectors(file_name, k, dimension, k_first_vectors_index, data_list); 
 
     do {
       
@@ -154,9 +155,6 @@ mainC_Py(PyObject *self, PyObject *args){
         }
         PyList_SetItem(ret,i, vector_py);
     }
-
-
-
 
     return ret;
 }
@@ -332,7 +330,7 @@ void sum_two_vectors (double **sum_of_vectors, double *new_vector, int dimension
 
 }
 
-double** extract_k_first_vectors(char* file_name, int k, int dimension, int* index_list) {
+double** extract_k_first_vectors(char* file_name, int k, int dimension, int* index_list, double** dataList) {
     /*extract_first_k_vectors(data_list *, arr *)):
     input: data_list *
     output: will update the double-array arr with first k vectors of the input file*/
@@ -347,26 +345,12 @@ double** extract_k_first_vectors(char* file_name, int k, int dimension, int* ind
         centroids[i] = calloc(dimension, sizeof(double));
     }
 
-    FILE* f = fopen(file_name, "r");
-    for(i = 0; i < k; i++){
+    for(i=0; i<k; i++){
         index = index_list[i];
-        while(fscanf(f, "%lf", &number) != EOF && (j < dimension)) {
-            if(index == counter){
-                if ((number != ',') && (number != '\n')){
-                centroids[i][j] = number;
-                j++;
-                number = fgetc(f);
-                }
-            }
-            else{
-                while(number != '\n'){
-                    number = fgetc(f);
-                }  
-            }
-            j = 0;
-            counter++;
-            }
+        for(j=0; j<dimension; j++){
+            centroids[i][j] = dataList[index][j];
         }
+    }
         return centroids;
     }    
    
