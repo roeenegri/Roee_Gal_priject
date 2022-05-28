@@ -1,3 +1,5 @@
+#define PY_SSIZE_T_CLEAN
+#include <python.h>
 #include <stdio.h> 
 #include <stdlib.h> /*memo alloc*/
 #include <math.h> /*math ops*/
@@ -30,6 +32,49 @@ int EPSILON = 0.001;
 
 
 /* main function */
+
+
+static PyMethodDef capiMethods[] = {
+    {"fit", (PyCFunction) mainC_Py, METH_VARARGS, PyDoc_STR("calc the k meams")},
+    {NULL, NULL, 0, NULL}
+};
+
+
+static struct PyModuleDef _moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "mykmeanssp",
+    NULL,
+    -1,
+    _capiMethods
+};
+
+
+PyMODINIT_FUNC PyInit_capi_kmeans(void) {
+    PyObject *m;
+    m = PyModule_Create(&moduledef);
+    if(!m){
+        return NULL;
+    }
+    return m;
+}
+
+
+static PyObject *
+mainC_Py(PyObject *self, PyObject *args){
+    PyObject *dataPy;
+    PyObject *kFirstVectorsPy;
+
+    double **data;
+    double **kFirstVectors;
+    int k, n, max_iter, dimension;
+    float EPSILON;
+    if (!PyArg_ParseTuple(args, "OOiiiid", &kFirstVectorsPy, &dataPy, &k, &n, &max_iter, &dimension, &EPSILON)){
+        //print erorr??????????????
+        return NULL;
+    }
+
+    return Py_BuildValue();
+}
 
 int main (int argc, char **argv) {
     
@@ -206,26 +251,6 @@ int main (int argc, char **argv) {
 
 /* implementation of helper functions */
 
-double** extract_k_first_vectors(double **data_list, int k, int dimention) {
-    int i;
-    int j;
-    double **centroids;
-    centroids = calloc(k, sizeof(double *));
-    for(i = 0; i < k; ++i){
-        centroids[i] = calloc(dimention, sizeof(double));
-    }
-    for(i = 0; i < k; ++i){
-        for(j = 0; j < dimention; ++j){
-            centroids[i][j] = data_list[i][j];
-        }
-    }
-
-    return centroids;
-    
-    /*extract_first_k_vectors(data_list *, arr *)):
-    input: data_list *
-    output: will update the double-array arr with first k vectors of the input file*/
-}
 
 int check_centroid_diff(double **prv_cents, double **cents, int k, int dimension) { 
     
@@ -245,58 +270,6 @@ int check_centroid_diff(double **prv_cents, double **cents, int k, int dimension
     /*check_centroid_diff (prev_cents, curr_cents):
     input: 2 lists of previous centroids and current centroids
     output: 1 if ALL of them hasn't changed more than epsilon, else 0*/
-}
-
-int find_dimension(char* input_file){
-    char c;
-    int dimension = 0;
-    FILE *f = fopen(input_file, "r");
-    if(f == NULL){
-        return terminate_invalid_input();
-    }
-
-    c = fgetc(f);
-
-    while ((c != '\n') && (c != EOF)) {
-        if(c == ','){
-            dimension += 1;
-        }
-        c = fgetc(f);
-    }
-
-    fclose(f);
-
-    dimension += 1;
-
-    return dimension;
-}
-
-
-int find_num_of_vectors(char* input_file){
-            
-    FILE *f;
-    int count = 0; 
-    char c; 
- 
-    f = fopen(input_file, "r");
-  
-    if (f == NULL){
-        return -1;
-    }
-  
-    c = fgetc(f);
-
-    while (c != EOF) {
-        if (c == '\n') {
-            count = count + 1;
-        }
-    
-        c = fgetc(f);
-    }
-
-    fclose(f);
-
-    return count;
 }
 
 
@@ -373,50 +346,13 @@ double calc_norm_form(double *vec1, double *vec2, int dimension, int with_sqrt) 
     return sum;
 }
 
-int extract_vectors (char *filename, double **data_list, int n, int dimension) {
-        
-    /*input: filename, a pointer to the data (vector) list
-    output: number of vectors
-    function will extract all the vectors from txt file to a list of vectors, and return their number*/
-
-    int i = 0;
-    double number = 0;
-    int j = 0;
-
-    FILE* f = fopen(filename, "r");
-    if (f == NULL) {
-        return -1; /*invalid input will be printed outside the function call*/
-    
-    }
-
-    for(i = 0; i < n; i++){
-        while(fscanf(f, "%lf", &number) != EOF && (j < dimension)) {
-                if ((number != ',') && (number != '\n')){
-                data_list[i][j] = number;
-                j++;
-                number = fgetc(f);
-                }
-        }
-        j = 0;
-    }
-
-    if (data_list == NULL) {
-        return -2;
-    } 
-
-    fclose(f);
-    return 0;
-
-     /* i (divided by) dimension =  number of vectors, this is what needs to be returned*/
-    /* MISSING: we need to also return the dimension outside somehow */
-}
 
 
 int terminate_with_error () {
         
     /* terminates the program: prints the general error message and returns 1 */
 
-    printf(ERROR);
+    printf("%s", ERROR);
     return 1;
 }
 
@@ -424,7 +360,7 @@ int terminate_invalid_input () {
     
     /* terminates the program: prints the invalid input message and returns 1 */
 
-    printf(INVALID);
+    printf("%s", INVALID);
     return 1;
 }
 
@@ -443,18 +379,7 @@ void sum_two_vectors (double **sum_of_vectors, double *new_vector, int dimension
 
 }
 
-    int isNumber(char number[]){
-    int i = 0;
 
-    if (number[0] == '-')
-        return 0;
-    for (; number[i] != 0; i++)
-    {
-        if (!isdigit(number[i]))
-            return 0;
-    }
-    return 1;
-}
 
 
 
