@@ -10,7 +10,7 @@
 /* function declaration */
 
 double** extract_k_first_vectors(char* , int, int, int*);
-int check_centroid_diff(double**, double**, int, int);
+int check_centroid_diff(double**, double**, int, int, double);
 void calc_centroids(double**, int *, double **, int, int);
 int matching_cluster(double*, double **, int, int);
 double calc_norm_form(double*, double *, int, int);
@@ -27,7 +27,7 @@ int isNumber(char*);
 /* constants */
 char INVALID [] = "Invalid Input!"; /*print and return 1 if input is invalid*/
 char ERROR [] = "An Error Has Occurred"; /*print and return 1 if any other error happend*/
-int EPSILON = 0.001;
+
 
 
 
@@ -147,7 +147,7 @@ mainC_Py(PyObject *self, PyObject *args){
 
         cnt = cnt+1;
 
-    } while ((cnt < max_iter) && (check_centroid_diff(prev_cents, cents, k, dimension) == 0));
+    } while ((cnt < max_iter) && (check_centroid_diff(prev_cents, cents, k, dimension, EPSILON) == 0));
 
     ret = PyList_New(k);
     for (i = 0;i < k; i++){
@@ -208,7 +208,7 @@ int extract_vectors (char *filename, double **data_list, int n, int dimension) {
 }
 
 
-int check_centroid_diff(double **prv_cents, double **cents, int k, int dimension) { 
+int check_centroid_diff(double **prv_cents, double **cents, int k, int dimension, double epsilon) { 
     
     int i = 0;
     double diff;
@@ -216,7 +216,7 @@ int check_centroid_diff(double **prv_cents, double **cents, int k, int dimension
     for(i = 0; i < k; i++){
         diff = calc_norm_form(prv_cents[i], cents[i], dimension, 1);
 
-        if(diff > 0.001){
+        if(diff > epsilon){
             return 0;
         }
     }  
@@ -336,6 +336,9 @@ void sum_two_vectors (double **sum_of_vectors, double *new_vector, int dimension
 }
 
 double** extract_k_first_vectors(char* file_name, int k, int dimension, int* index_list) {
+    /*extract_first_k_vectors(data_list *, arr *)):
+    input: data_list *
+    output: will update the double-array arr with first k vectors of the input file*/
     int i;
     int j = 0;
     double **centroids;
@@ -356,20 +359,23 @@ double** extract_k_first_vectors(char* file_name, int k, int dimension, int* ind
                 centroids[i][j] = number;
                 j++;
                 number = fgetc(f);
+                }
             }
-              if(number == '/n'){
-                  counter++;
-                }
-                }
+            else{
+                while(number != '\n'){
+                    number = fgetc(f);
+                }  
+            }
+            j = 0;
+            counter++;
+            }
         }
-        j = 0;
+        return centroids;
     }    
-    return centroids;
+   
     
-    /*extract_first_k_vectors(data_list *, arr *)):
-    input: data_list *
-    output: will update the double-array arr with first k vectors of the input file*/
-}
+
+
 
 
 
