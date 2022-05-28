@@ -1,5 +1,5 @@
 #define PY_SSIZE_T_CLEAN
-#include <python.h>
+#include <Python.h>
 #include <stdio.h> 
 #include <stdlib.h> /*memo alloc*/
 #include <math.h> /*math ops*/
@@ -9,7 +9,7 @@
 
 /* function declaration */
 
-double** extract_k_first_vectors(double**, int, int);
+double** extract_k_first_vectors(char* , int, int, int*);
 int check_centroid_diff(double**, double**, int, int);
 void calc_centroids(double**, int *, double **, int, int);
 int matching_cluster(double*, double **, int, int);
@@ -25,16 +25,14 @@ int isNumber(char*);
 
 
 /* constants */
-
 char INVALID [] = "Invalid Input!"; /*print and return 1 if input is invalid*/
 char ERROR [] = "An Error Has Occurred"; /*print and return 1 if any other error happend*/
 int EPSILON = 0.001;
 
 
-/* main function */
 
 
-static PyMethodDef capiMethods[] = {
+static PyMethodDef _capiMethods[] = {
     {"fit", (PyCFunction) mainC_Py, METH_VARARGS, PyDoc_STR("calc the k meams")},
     {NULL, NULL, 0, NULL}
 };
@@ -51,42 +49,27 @@ static struct PyModuleDef _moduledef = {
 
 PyMODINIT_FUNC PyInit_capi_kmeans(void) {
     PyObject *m;
-    m = PyModule_Create(&moduledef);
+    m = PyModule_Create(&_moduledef);
     if(!m){
         return NULL;
     }
     return m;
 }
 
+/* main function */
 
 static PyObject *
 mainC_Py(PyObject *self, PyObject *args){
-    PyObject *dataPy;
-    PyObject *kFirstVectorsPy;
-
+    PyObject *file_namePy;
+    PyObject *kFirstVectorsIndexPy;
+    PyObject *ret;
+    char* file_name;
+    int* k_first_vectors_index;
     double **data;
     double **kFirstVectors;
     int k, n, max_iter, dimension;
     float EPSILON;
-    if (!PyArg_ParseTuple(args, "OOiiiid", &kFirstVectorsPy, &dataPy, &k, &n, &max_iter, &dimension, &EPSILON)){
-        //print erorr??????????????
-        return NULL;
-    }
-
-    return Py_BuildValue();
-}
-
-int main (int argc, char **argv) {
-    
-    /*input varibles declaration*/
-
-    int k;
-    int max_iter;
-    int input_file_index;
-    int output_file_index;
-    int n; /*default number of vectors in input file is set to 0, will be set according to number of vectors soon*/
     int cnt ; /*iteration counter of the while-loop*/
-    int dimension; /*dimension of the vectors*/
     double **cents; /*array of centroids*/
     double **prev_cents; /*array of previos centroids (for later calculations)*/
     double **data_list;
@@ -94,57 +77,23 @@ int main (int argc, char **argv) {
     int val;
     int *num_of_vectors;
     double **sum_of_vectors;
-    FILE* output;
     int j;
+
+    if (!PyArg_ParseTuple(args, "sOiiiid", &file_namePy, &kFirstVectorsIndexPy, &k, &n, &max_iter, &dimension, &EPSILON)){
+        //print erorr??????????????
+        return NULL;
+    }
+
+    k_first_vectors_index = calloc(k, sizeof(int));
+
+    for(i=0; i < k; i++){
+        k_first_vectors_index[i] = PyLong_AsLong(PyList_GET_ITEM(kFirstVectorsIndexPy, i));
+    }
+
+    file_name = file_namePy; 
 
     cnt = 0;
 
-    if(isNumber(argv[1]) == 0){
-        return terminate_invalid_input();
-    }
-    /* MISSING: casting? check that arguments are from the right types (int, etc.) */
-    sscanf(argv[1], "%d", &k);
-
-    if (k <= 1) { /* we assume argv[1] is k. validation of smaller than n will be checked later: row 74*/
-        return terminate_invalid_input();
-    }
-
-    else if (argc == 4) { /*no max_iter provided*/
-        
-        max_iter = 200; /*default value*/
-        input_file_index = 2;
-        output_file_index = 3;
-    }
-
-    else if (argc == 5) { /*max_iter provided, we assume it's in argv[2]*/
-        if(isNumber(argv[2]) == 0){
-            return terminate_invalid_input();
-        }
-        sscanf(argv[2], "%d", &max_iter);
-        if (max_iter <= 0) {
-            return terminate_invalid_input();
-        }
-        input_file_index = 3;
-        output_file_index = 4;
-    }
-
-    else {
-
-        return terminate_invalid_input();
-    }
-
-    /*varible decleration*/
-
-
-    n = find_num_of_vectors(argv[input_file_index]);
-
-    if(k > n){
-        return terminate_invalid_input();
-    }
-
-
-    dimension = find_dimension(argv[input_file_index]);
-    
     data_list = calloc(n, sizeof(double*));
     for(i = 0; i < n; ++i){
         data_list[i] = calloc(dimension, sizeof(double));
@@ -154,27 +103,17 @@ int main (int argc, char **argv) {
     for(i = 0; i < k; ++i){
         prev_cents[i] = calloc(dimension, sizeof(double));
     }
-
-    val = extract_vectors(argv[input_file_index], data_list, n, dimension);
-    if (val == -1){
-        return terminate_invalid_input();
+    
+    val = extract_vectors(file_name, data_list, n, dimension); //put all the data from the file to the datalist
+    if(val == -2){
+        terminate_with_error();
     }
 
-    else if (val == -2) {
-        return terminate_with_error();
-    }
-
-    if (k >= n) {
-        return terminate_invalid_input();
-    }
-
-    /*algorithm*/
+     /*algorithm*/
 
     /*initialization of centroid list: with first k vectors*/
-    cents = extract_k_first_vectors(data_list, k, dimension); 
 
-
-    /* checked with input_1 until here ! */
+    cents = extract_k_first_vectors(file_name, k, dimension, k_first_vectors_index); 
 
     do {
       
@@ -210,46 +149,63 @@ int main (int argc, char **argv) {
 
     } while ((cnt < max_iter) && (check_centroid_diff(prev_cents, cents, k, dimension) == 0));
 
-
-    /* output file generation */
-
-    output = fopen (argv[output_file_index], "w");
-    if (output == NULL) {
-        return terminate_invalid_input();
-    }
-
-    for (i = 0; i < k; i ++) {
-        for (j = 0; j < dimension; j ++){
-            if ((j == 0) && (i != 0)) {
-                
-                fprintf (output, "\n");
-            }
-
-            if (j == (dimension-1)) {
-                
-                fprintf (output,"%.4f", cents[i][j]); 
-            }
-
-            else {
-                
-                fprintf (output,"%.4f,", cents[i][j]);
-            }
+    ret = PyList_New(k);
+    for (i = 0;i < k; i++){
+        PyObject *vector_py = PyList_New(dimension);
+        for(j = 0;j < dimension; j++){
+            PyList_SetItem(vector_py, j, PyFloat_FromDouble(cents[i][j]));
         }
+        PyList_SetItem(ret,i, vector_py);
     }
 
-    fclose(output);
 
-    /* MISSING : other errors? we haven't used it: try/catch? assert? */
 
-    free (data_list);
-    free (prev_cents);
-    free (cents);
 
-    return 0;
+    return ret;
 }
 
 
 /* implementation of helper functions */
+
+
+int extract_vectors (char *filename, double **data_list, int n, int dimension) {
+        
+    /*input: filename, a pointer to the data (vector) list
+    output: number of vectors
+    function will extract all the vectors from txt file to a list of vectors, and return their number*/
+
+    int i = 0;
+    double number = 0;
+    int j = 0;
+
+    FILE* f = fopen(filename, "r");
+    if (f == NULL) {
+        return -2; /*error will be printed outside the function call*/
+    
+    }
+
+    for(i = 0; i < n; i++){
+        while(fscanf(f, "%lf", &number) != EOF && (j < dimension)) {
+                if ((number != ',') && (number != '\n')){
+                data_list[i][j] = number;
+                j++;
+                number = fgetc(f);
+                }
+              
+        }
+        j = 0;
+    }
+
+    if (data_list == NULL) {
+        return -2;
+    } 
+
+    fclose(f);
+    return 0;
+
+     /* i (divided by) dimension =  number of vectors, this is what needs to be returned*/
+    /* MISSING: we need to also return the dimension outside somehow */
+}
 
 
 int check_centroid_diff(double **prv_cents, double **cents, int k, int dimension) { 
@@ -377,6 +333,42 @@ void sum_two_vectors (double **sum_of_vectors, double *new_vector, int dimension
         sum_of_vectors[cluster_number][i] += new_vector[i];
     }
 
+}
+
+double** extract_k_first_vectors(char* file_name, int k, int dimension, int* index_list) {
+    int i;
+    int j = 0;
+    double **centroids;
+    double number;
+    int index;
+    int counter = 0;
+    centroids = calloc(k, sizeof(double *));
+    for(i = 0; i < k; ++i){
+        centroids[i] = calloc(dimension, sizeof(double));
+    }
+
+    FILE* f = fopen(file_name, "r");
+    for(i = 0; i < k; i++){
+        index = index_list[i];
+        while(fscanf(f, "%lf", &number) != EOF && (j < dimension)) {
+            if(index == counter){
+                if ((number != ',') && (number != '\n')){
+                centroids[i][j] = number;
+                j++;
+                number = fgetc(f);
+            }
+              if(number == '/n'){
+                  counter++;
+                }
+                }
+        }
+        j = 0;
+    }    
+    return centroids;
+    
+    /*extract_first_k_vectors(data_list *, arr *)):
+    input: data_list *
+    output: will update the double-array arr with first k vectors of the input file*/
 }
 
 
