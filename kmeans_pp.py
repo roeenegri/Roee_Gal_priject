@@ -1,7 +1,7 @@
 import sys
 import numpy
 import pandas as pd
-from ctypes import *
+import mykmeanssp
 
 
 # helper methods
@@ -97,7 +97,7 @@ try:
     list_of_all_vectors = list(vector_table.tolist())  # creating a list of lists to send to c module
 
     num_of_vectors = len(vector_table)  # counting the number of vectors provided
-    
+
     # creating a .txt file of vectors to send to c module for processing
     f = open("vectors.txt", "w")
 
@@ -109,19 +109,21 @@ try:
                 f.write('\n')
             else:
                 f.write(temp_float + ',')
-    
+    f.close()
+
     # determining dimension of vectors
     if len(list_of_all_vectors) != 0:
         dimension = len(list_of_all_vectors[
-                            0])  # dimension of first vector in the list (assuming input is valid, so all vectors 
-        # have the same dimension) 
+                            0])  # dimension of first vector in the list (assuming input is valid, so all vectors
+        # have the same dimension)
     else:  # there are no vectors in the list!
         errorOccurred()
 
     index_list = []  # index list: will be returned to the user at the end of the run
 
     numpy.random.seed(0)
-    curr_miu_index = numpy.random.randint(0, num_of_vectors)  # CONSIDER: instead of choosing a number with randint,
+    curr_miu_index = numpy.random.randint(0, num_of_vectors)  # CONSIDER: non existing indices!!!? and instead of
+    # choosing a number with randint,
     # maybe choosing directly from the index column in table? note: choosing a random vector does not follow the desired
     # result! (e.g, 26 instead of 44 for input 1)
 
@@ -157,9 +159,8 @@ try:
         miu_list = numpy.vstack([miu_list, [curr_miu]])
 
     # CALLING CLUSTERING METHOD FROM HW1 (CONSIDER: need to fix memory freeing)
-    c_module = CDLL("./mykmeanssp.so")
-    c_module.connect()
-    cent_list = c_module.fit(index_list, "vectors.txt", k, num_of_vectors, max_iter, dimension, EPSILON)
+
+    cent_list = mykmeanssp.fit("vectors.txt", index_list, k, num_of_vectors, max_iter, dimension, EPSILON)
 
     # retrieving original indices of chosen k vectors
 
@@ -171,10 +172,11 @@ try:
 
     for i in range(0, len(cent_list)):  # printing centroids (by coordinates with commas)
         for j in range(0, len(cent_list[i])):
-            if i == len(cent_list[i] - 1):
-                print(cent_list[i][j])
+            if j == (len(cent_list[i]) - 1):
+                print("%.4f" % cent_list[i][j])
+
             else:
-                print(cent_list[i][j], ",", sep='', end='')
+                print("%.4f" % cent_list[i][j], ",", sep='', end='')
 
 except:
     errorOccurred()
