@@ -18,15 +18,8 @@ def errorOccurred():
 
 def euclidean_norm_squared(vector1, vector2):
     # this function determines the euclidean distance of two vectors, WITHOUT taking a sqrt at the end.
-    # CONSIDER: using numpy's built-in?
 
-    dimension = len(vector1)  # supposed to be aligned with dimension outside
-    updating_sum = 0
-
-    for coordinate in range(0, dimension):
-        updating_sum = updating_sum + numpy.square((vector1[coordinate] - vector2[coordinate]))
-
-    return updating_sum
+    return numpy.square(numpy.linalg.norm(vector1-vector2))
 
 
 # input validations
@@ -87,6 +80,7 @@ try:
 
     # convert file_1 && file_2 to dataframe in pandas, make first column their index column and sort by index
     vector_table = pd.merge(f1_df, f2_df, how='inner', on='col 0')  # merge by first column
+    lst = sorted(vector_table['col 0'].tolist())
     vector_table = vector_table.set_index('col 0')  # setting the first column as index
     vector_table = vector_table.sort_index()
 
@@ -122,7 +116,8 @@ try:
     index_list = []  # index list: will be returned to the user at the end of the run
 
     numpy.random.seed(0)
-    curr_miu_index = numpy.random.randint(0, num_of_vectors)  # CONSIDER: non existing indices!!!? and instead of
+    curr_miu_index = numpy.random.choice(lst)  # CONSIDER: non existing indices!!!? and instead of
+    curr_miu_index = int(curr_miu_index)
     # choosing a number with randint,
     # maybe choosing directly from the index column in table? note: choosing a random vector does not follow the desired
     # result! (e.g, 26 instead of 44 for input 1)
@@ -131,7 +126,7 @@ try:
 
     miu_list = [vector_table[curr_miu_index]]  # miu_list now holds the first miu that has been chosen randomly
     curr_miu = miu_list[0]
-    prob_list = [0 for i in range(0, num_of_vectors)]  # CONSIDER: change the initial value? for safety reasons
+    prob_list = [0 for i in range(0, num_of_vectors)]
     d_list = [numpy.inf for i in range(0, num_of_vectors)]  # for x_l, d_list[l] is D_l
 
     # len(miu_list) = i, and it is 1 right now
@@ -158,7 +153,7 @@ try:
         curr_miu = vector_table[curr_miu_index]
         miu_list = numpy.vstack([miu_list, [curr_miu]])
 
-    # CALLING CLUSTERING METHOD FROM HW1 (CONSIDER: need to fix memory freeing)
+    # CALLING CLUSTERING METHOD FROM HW1
 
     cent_list = mykmeanssp.fit("vectors.txt", index_list, k, num_of_vectors, max_iter, dimension, EPSILON)
 
